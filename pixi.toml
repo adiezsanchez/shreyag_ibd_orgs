@@ -38,10 +38,3 @@ pyclesperanto-prototype = "*" # GPU image processing (OpenCL)
 pyqt = "*" # GUI backend for napari
 setuptools = "<81" # pin to avoid pkg_resources removal
 seaborn = ">=0.13.2,<0.14"
-
-# -------------------------
-# PyPI deps
-# -------------------------
-
-[pypi-dependencies]
-spotiflow = "*"
