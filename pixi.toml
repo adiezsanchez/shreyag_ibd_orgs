@@ -20,7 +20,7 @@ cmd = "jupyter lab"
 # -------------------------
 
 [dependencies]
-python = ">=3.10" # freeze Python version
+python = "3.10.*"  
 pytorch = "==2.5.0"
 pytorch-cuda = "12.1.*"
 torchvision = "==0.20.0"
@@ -30,11 +30,12 @@ edt = "*" # Euclidean distance transforms
 ipykernel = "*" # Jupyter kernel support
 ipython = "*" # interactive shell
 jupyterlab = "*" # Jupyter environment
-napari = "*" # image viewer
+napari = "==0.5.4" # image viewer
 nbformat = "*" # notebook parsing
 nd2 = "*" # Nikon ND2 image reader
 plotly = "*" # plotting library
 pyclesperanto-prototype = "*" # GPU image processing (OpenCL)
 pyqt = "*" # GUI backend for napari
+pydantic = "<2.0" # Avoid incompatibility between Pydantic and Napari
 setuptools = "<81" # pin to avoid pkg_resources removal
 seaborn = ">=0.13.2,<0.14"
