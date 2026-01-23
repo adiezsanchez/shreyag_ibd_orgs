@@ -1,13 +1,11 @@
 from pathlib import Path
 import nd2
-from tifffile import imread, imwrite
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from scipy.ndimage import map_coordinates
 from skimage.measure import regionprops_table
+from skimage.segmentation import relabel_sequential
+from skimage.morphology import remove_small_objects
 import pyclesperanto_prototype as cle
-import apoc
 import warnings
 
 cle.select_device("RTX")
@@ -195,3 +193,139 @@ def simulate_cell_chunked_3d(nuclei_labels, dilation_radius=2, erosion_radius=0,
         warnings.warn(f"Mismatch in label sets! Nuclei labels: {len(nuclei_labels_unique)}, Cell labels: {len(cell_labels_unique)}")
     
     return cell
+
+def segment_organoids_from_cp_labels(cytoplasm_labels):
+    
+    """Segment whole organoids from input image using individual Cellpose cytoplasm labels as starting point"""
+
+    # Maximum projection across z-axis to flatten 3D labels into 2D space
+    mip_labels = np.max(cytoplasm_labels, axis=0)
+
+    # Merge touching labels to establish first organoid entities
+    merged_mip = cle.merge_touching_labels(mip_labels)
+
+    # Dilation-Erosion cycle to close holes
+    dilated_labels = cle.dilate_labels(merged_mip, radius=5)
+    eroded_labels = cle.erode_labels(dilated_labels, radius=1)
+
+    # Pull from GPU in order to filter out small org and relabel using skimage
+    org_labels = cle.pull(eroded_labels)
+    org_labels = remove_small_objects(org_labels, min_size=5000)
+
+    # Relabel starting from 1
+    organoid_labels = relabel_sequential(org_labels)[0]
+
+    return mip_labels, organoid_labels
+
+
+def map_small_to_big(labels_small, labels_big):
+
+    """Map each cell label to each corresponding organoid"""
+
+    mask = labels_small > 0
+    pairs = np.stack([
+        labels_small[mask],
+        labels_big[mask]
+    ], axis=1)
+
+    # remove background overlaps
+    pairs = pairs[pairs[:, 1] > 0]
+
+    mapping = {}
+    for s, b in pairs:
+        mapping.setdefault(int(b), set()).add(int(s))
+
+    return mapping
+
+def extract_organoid_stats_and_merge (mip_labels, organoid_labels, props_df):
+
+    """Map each cell label to its corresponding organoid, extract simple organoid features and merge with per cell stats"""
+
+    # Map each cell label to each corresponding organoid
+    mapping = map_small_to_big(mip_labels, organoid_labels)
+
+    # Invert mapping to map to props_df
+    small_to_big = {}
+    for b, smalls in mapping.items():
+        for s in smalls:
+            small_to_big.setdefault(s, set()).add(b)
+
+    # Add organoid column to props_df
+    props_df["organoid"] = (
+        props_df["label"]
+        .map(lambda s: next(iter(small_to_big[s]))
+            if s in small_to_big and len(small_to_big[s]) == 1
+            else 0)
+        .astype(int)
+    )
+
+    # Reorder so it appears after well_id and before label
+    cols = list(props_df.columns)
+    cols.insert(cols.index("well_id") + 1, cols.pop(cols.index("organoid")))
+    props_df = props_df[cols]
+
+    # Sanity checks
+
+    # Cells with no organoid
+    n_orphans = (props_df["organoid"] == 0).sum()
+
+    # Cells mapped to non-existing organoids
+    bad = ~props_df["organoid"].isin(np.unique(organoid_labels))
+    if bad.any():
+        bad_rows = props_df.loc[bad]
+        print("Cells mapped to non-existing organoids: Double check logic")
+
+    # Cells assigned to multiple organoids
+    n_multi_parent = (
+        props_df
+        .groupby("label")["organoid"]
+        .nunique()
+        .gt(1)
+        .sum()
+    )
+
+    #Calculate percentage of orphan cells to total cells
+    total_cells = props_df["label"].max()
+    perc_orphan = round(((n_orphans / total_cells) * 100), 2)
+
+    print(f"Cells mapped to no organoid: {n_orphans} - {perc_orphan}% of total cells ({total_cells})")
+
+    #Extract area information at an organoid level and merge with the existing props_df
+
+    organoid_props = regionprops_table(label_image=organoid_labels,
+                                properties=[
+                                    "label",
+                                    "area",           # organoid size (2D MIP)
+                                    "perimeter",      # boundary complexity
+                                    "eccentricity",   # round (0) → elongated (1)
+                                    "solidity",       # filled vs lobed (area / convex area)
+                                    "extent",         # area / bounding box area
+                                ],
+                            )
+        
+    # Convert to dataframe
+    organoids_props_df = pd.DataFrame(organoid_props)
+
+    # Rename intensity_mean column to indicate the specific image
+    prefix = "organoid"
+
+    rename_map = {
+        "label": "organoid",
+        "area": f"{prefix}_area",
+        "perimeter": f"{prefix}_perimeter",
+        "eccentricity": f"{prefix}_eccentricity",
+        "solidity": f"{prefix}_solidity",
+        "extent": f"{prefix}_extent"
+    }
+
+    organoids_props_df.rename(columns=rename_map, inplace=True)
+
+    # Merge organoid_props and cell_props Dataframes
+
+    final_df = props_df.merge(
+        organoids_props_df,
+        how="left",
+        on="organoid"
+    )
+
+    return final_df
