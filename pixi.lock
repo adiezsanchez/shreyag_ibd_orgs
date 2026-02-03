@@ -299,6 +299,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-1.10.22-pyh3cfb1c2_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-compat-0.1.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.19.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pynndescent-0.5.13-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pyopencl-2025.2.7-py310hfb7dd09_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyopengl-3.1.10-pyh7428d3b_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.5-pyhcf101f3_0.conda
@@ -393,6 +394,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_utils-0.1.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025b-h78e105d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/ucrt-10.0.26100.0-h57928b3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/umap-learn-0.5.11-py310h5588dad_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/unicodedata2-16.0.0-py310h29418f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/untokenize-0.1.1-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/uri-template-1.3.0-pyhd8ed1ab_1.conda
@@ -3963,6 +3965,21 @@ packages:
   license_family: BSD
   size: 889287
   timestamp: 1750615908735
+- conda: https://conda.anaconda.org/conda-forge/noarch/pynndescent-0.5.13-pyhd8ed1ab_1.conda
+  sha256: fd7f81cfed1a04883261e2ebd73677066f5040c4ed7984e870c9c931069f9398
+  md5: 87b563f2388f452cedb6a878b738c7dc
+  depends:
+  - llvmlite >=0.30
+  - numba >=0.46
+  - numpy >=1.13
+  - python >=3.9
+  - scikit-learn >=0.19
+  - scipy >=1.0
+  - setuptools
+  license: BSD-2-Clause
+  license_family: BSD
+  size: 49630
+  timestamp: 1734193646381
 - conda: https://conda.anaconda.org/conda-forge/win-64/pyopencl-2025.2.7-py310hfb7dd09_0.conda
   sha256: 911eac0628f2721fccf7c4f8eb190c93f12599d439a6e2082375e00a7e66a435
   md5: 88c1214b932ec6f202fd36d5a75e3b71
@@ -5163,6 +5180,24 @@ packages:
   license: LicenseRef-MicrosoftWindowsSDK10
   size: 694692
   timestamp: 1756385147981
+- conda: https://conda.anaconda.org/conda-forge/win-64/umap-learn-0.5.11-py310h5588dad_0.conda
+  sha256: 1c6926523d9d6d6d83037529f5c07775e9168dd866ea5b92397272c9a77fbb3b
+  md5: fa273ec89124823534073cd1de6109f4
+  depends:
+  - numba >=0.51.2
+  - numpy >=1.17
+  - pynndescent >=0.5
+  - python >=3.10,<3.11.0a0
+  - python_abi 3.10.* *_cp310
+  - scikit-learn >=0.22
+  - scipy >=1.3.1
+  - setuptools
+  - tbb >=2019.0
+  - tqdm
+  license: BSD-2-Clause
+  license_family: BSD
+  size: 145885
+  timestamp: 1768311905465
 - conda: https://conda.anaconda.org/conda-forge/win-64/unicodedata2-16.0.0-py310h29418f3_1.conda
   sha256: 7c112c804effc021f91f25e59ee2cfa4d6ed76019ec722dd78b9808c118cc9ab
   md5: 228ad20cfebef80487ad5903b33d3abd
