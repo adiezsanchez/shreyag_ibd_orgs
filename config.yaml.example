@@ -1,0 +1,58 @@
+# Example configuration file for organoid analysis pipeline
+# This file can be used with --config flag, or parameters can be overridden via command-line
+
+# Markers to analyze
+# Each marker is a dictionary with:
+#   - name: Marker name (for output column naming)
+#   - channel: Channel index (0-indexed) in the image
+#   - location: Either "cell" or "membrane" - where to measure the marker
+markers:
+  - name: "Occludin_RFP"
+    channel: 0
+    location: "membrane"
+  - name: "Claudin_FITC"
+    channel: 1
+    location: "membrane"
+  - name: "Occludin_RFP"
+    channel: 0
+    location: "cell"
+
+# Output directories
+# Results will be saved to: results_folder / experiment_id / {well_id}_per_cell_results.csv
+results_folder: "results"
+
+# Cellpose label cache directory
+# Cached segmentations will be saved here to avoid recomputation
+cellpose_folder: "cellpose_labels"
+
+# Image downsampling factor
+# Use 2 or 4 for downsampling in XY (None for no downsampling)
+# This reduces processing time but may affect accuracy
+slicing_factor_xy: null
+
+# Cellpose segmentation parameters
+cellpose_params:
+  # Cell diameter in pixels (XY)
+  diameter: 20
+  
+  # Flow threshold (lower = more cells detected)
+  flow_threshold: 0.4
+  
+  # Cell probability threshold (lower = more cells detected)
+  cellprob_threshold: 0.0
+  
+  # Minimum cell size in pixels
+  min_size: 15
+  
+  # Cellpose model type (e.g., "cyto3", "cyto2", "nuclei")
+  model_type: "cyto3"
+
+# GPU and logging options
+# Set to false to skip GPU availability check (useful for HPC environments)
+check_gpu: true
+
+# Enable Cellpose logger setup (produces verbose output)
+enable_logger_setup: false
+
+# Optional: Input directory path (not needed if using --image argument)
+# directory_path: null

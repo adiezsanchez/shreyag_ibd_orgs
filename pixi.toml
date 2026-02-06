@@ -34,6 +34,7 @@ napari = "==0.5.4" # image viewer
 nbformat = "*" # notebook parsing
 nd2 = "*" # Nikon ND2 image reader
 plotly = "*" # plotting library
+pyyaml = "*" # YAML configuration file parsing
 pyclesperanto-prototype = "*" # GPU image processing (OpenCL)
 pyqt = "*" # GUI backend for napari
 pydantic = "<2.0" # Avoid incompatibility between Pydantic and Napari
