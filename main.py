@@ -3,8 +3,15 @@
 import sys
 import logging
 from pathlib import Path
-from config_loader import ConfigLoader
-from organoid_analyzer import OrganoidAnalyzer
+
+# Add src directory to Python path to enable imports
+# This allows the script to be run from the repo root without setting PYTHONPATH
+src_path = Path(__file__).parent / 'src'
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+from organoid_analysis.config_loader import ConfigLoader
+from organoid_analysis.organoid_analyzer import OrganoidAnalyzer
 
 # Setup logging
 logging.basicConfig(

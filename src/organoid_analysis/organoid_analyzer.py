@@ -8,13 +8,13 @@ from cellpose import models, core, io
 import pyclesperanto_prototype as cle
 from skimage.measure import regionprops_table
 from tifffile import imwrite, imread
-from utils import (
+from .utils import (
     read_image,
     extract_scaling_metadata,
     segment_organoids_from_cp_labels,
     extract_organoid_stats_and_merge
 )
-from config_loader import AnalysisConfig
+from .config_loader import AnalysisConfig
 
 logger = logging.getLogger(__name__)
 
