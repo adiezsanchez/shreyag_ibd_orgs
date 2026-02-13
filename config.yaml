@@ -25,7 +25,7 @@ markers:
 
 # Output directories
 # Results will be saved to: results_folder / experiment_id / {well_id}_per_cell_results.csv
-results_folder: "results_cursor"
+results_folder: "results_csv"
 
 # Cellpose label cache directory
 # Cached segmentations will be saved here to avoid recomputation
