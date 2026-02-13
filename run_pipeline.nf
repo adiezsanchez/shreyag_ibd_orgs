@@ -22,6 +22,7 @@ process runPipeline {
     script:
     """
     module load CUDA/12.1.1 2>/dev/null || true
+    export OPENCL_VENDOR_PATH="${projectDir}/.pixi/envs/default/etc/OpenCL/vendors:/etc/OpenCL/vendors"
     pixi run fix_opencl_hpc
     pixi run python ${projectDir}/main.py --image "${image_file}" --config ${params.config}
     """
