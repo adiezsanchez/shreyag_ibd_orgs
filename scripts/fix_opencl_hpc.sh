@@ -20,6 +20,20 @@ else
   echo "WARN: libOpenCL.so.1 not found"
 fi
 
+# libnvidia-opencl.so.1: NVIDIA OpenCL vendor lib (ICD loader loads this via nvidia.icd)
+NVIDIA_OPENCL_LIB=$(ldconfig -p 2>/dev/null | grep -oE '/[^ ]+libnvidia-opencl\.so\.1' | head -1)
+if [ -z "$NVIDIA_OPENCL_LIB" ]; then
+  for p in /lib64/libnvidia-opencl.so.1 /usr/lib/x86_64-linux-gnu/libnvidia-opencl.so.1; do
+    [ -e "$p" ] && NVIDIA_OPENCL_LIB="$p" && break
+  done
+fi
+if [ -n "$NVIDIA_OPENCL_LIB" ]; then
+  ln -sf "$NVIDIA_OPENCL_LIB" "$PIXI_ENV/lib/libnvidia-opencl.so.1"
+  echo "Linked libnvidia-opencl.so.1 -> $NVIDIA_OPENCL_LIB"
+else
+  echo "WARN: libnvidia-opencl.so.1 not found"
+fi
+
 # Ensure ICD vendor dir exists and link nvidia.icd
 mkdir -p "$PIXI_ENV/etc/OpenCL/vendors"
 if [ -e /etc/OpenCL/vendors/nvidia.icd ]; then
