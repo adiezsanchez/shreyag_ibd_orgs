@@ -18,6 +18,7 @@ LD_LIBRARY_PATH = "$PIXI_PROJECT_ROOT/.pixi/envs/default/lib:/usr/lib/x86_64-lin
 
 [tasks]
 fix_opencl = "scripts/fix_opencl.sh"
+fix_opencl_hpc = "scripts/fix_opencl_hpc.sh"
 
 [tasks.lab]
 cmd = "jupyter lab"
