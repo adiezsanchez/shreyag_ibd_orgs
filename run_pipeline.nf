@@ -5,6 +5,31 @@ params.input_dir = file('./images').toAbsolutePath()
 params.output_dir = './results'
 params.config = "${projectDir}/config.yaml"
 
+process linkOpenCL {
+    label 'gpu_test'
+    output:
+    path "opencl_ready"
+    script:
+    """
+    pixi run fix_opencl
+    touch opencl_ready
+    """
+}
+
+process testGpu {
+    tag "gpu_check"
+    label 'gpu_test'
+    input:
+    path opencl_ready
+    output:
+    path "gpu_ready"
+    script:
+    """
+    pixi run python ${projectDir}/tests/test_gpu.py
+    touch gpu_ready
+    """
+}
+
 process runPipeline {
     tag "${image_file.name}"
     label 'gpu_test'
@@ -13,11 +38,11 @@ process runPipeline {
     publishDir "${projectDir}/results_csv", pattern: "results_csv/*/*.csv", mode: 'copy', saveAs: { filename -> filename.split('/').last() }
 
     input:
-    path image_file
+    tuple path(image_file), path(gpu_ready)
 
     output:
     path "cellpose_labels/*"
-    path "results_csv/**/*"
+    path "results_csv/*/*"
 
     script:
     """
@@ -27,5 +52,8 @@ process runPipeline {
 
 workflow {
     images = Channel.fromPath("${params.input_dir}/*.nd2", checkIfExists: true)
-    runPipeline(images)
+    opencl_done = linkOpenCL()
+    gpu_done = testGpu(opencl_done)
+    run_input = images.combine(gpu_done)
+    runPipeline(run_input)
 }
