@@ -16,5 +16,6 @@ Or directly:
 
 There are also interactive Jupyter Notebooks for batch processing of images using for loops under <code>notebooks</code>
 
-#TODO: Adapt pixi environment to run on Linux
-#TODO: Create Nextflow config files to run in HPC using slurm (do not hardcode so it can work on Azure or AWS)
+In order to run the pipeline on the HPC at IDUN using sbatch point to the folder containing the images:
+<code>sbatch hpc_sbatch/run_pipeline_slurm.sh /cluster/work/albertds/raw_data/20260114_T7_2microns</code>
+<code>squeue -u $USER</code>
