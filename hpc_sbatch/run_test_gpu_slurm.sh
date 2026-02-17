@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=mh-ikom
 #SBATCH --partition=GPUQ
-#SBATCH --gres=gpu:a100:2
+#SBATCH --gres=gpu:a100:4
 #SBATCH --time=0:10:00
 #SBATCH --job-name=test_gpu_min
 

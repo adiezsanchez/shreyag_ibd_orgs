@@ -10,3 +10,7 @@ raw_data
 results
 results_cursor
 .vscode
+
+#Slurm output files
+*.out
+*.err
