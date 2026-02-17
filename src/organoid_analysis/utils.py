@@ -2,6 +2,7 @@ from pathlib import Path
 import nd2
 import numpy as np
 import pandas as pd
+from scipy import stats
 from skimage.measure import regionprops_table
 from skimage.segmentation import relabel_sequential
 from skimage.morphology import remove_small_objects
@@ -217,6 +218,28 @@ def segment_organoids_from_cp_labels(cytoplasm_labels):
 
     return mip_labels, organoid_labels
 
+def remap_labels(nuclei_labels, cell_labels):
+
+    # Label-to-label remapping: each nucleus inherits the cell label value it lies in
+    # Might cause some issues with multinucleated cells (will try to filter them out later)
+
+    out = np.zeros_like(nuclei_labels)
+
+    for nid in np.unique(nuclei_labels):
+        if nid == 0:
+            continue
+        
+        mask = nuclei_labels == nid
+        cell_vals = cell_labels[mask]
+        cell_vals = cell_vals[cell_vals != 0]  # ignore background
+        
+        if len(cell_vals) == 0:
+            continue
+        
+        cell_id = stats.mode(cell_vals, keepdims=False).mode
+        out[mask] = cell_id
+
+    return out
 
 def map_small_to_big(labels_small, labels_big):
 
