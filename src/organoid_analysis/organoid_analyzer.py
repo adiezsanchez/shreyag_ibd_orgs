@@ -81,18 +81,15 @@ class CellposeSegmenter:
 # Full 3D-compatible regionprops list (same as BP notebook)
 REGIONPROPS_PROPERTIES = [
     "label",
-    "area",
-    "area_bbox",
-    "area_convex",
-    "area_filled",
-    "axis_major_length",
-    "axis_minor_length",
-    "equivalent_diameter_area",
-    "euler_number",
-    "extent",
-    "feret_diameter_max",
-    "solidity",
-    "inertia_tensor_eigvals",
+    "area",                          # number of voxels (volume in voxel units)
+    "area_bbox",                     # volume of axis-aligned bounding box
+    "area_filled",                   # volume after filling holes
+    "axis_major_length",             # length of major axis from inertia tensor (elongation)
+    "axis_minor_length",             # length of minor axis (second principal axis in 3D)
+    "equivalent_diameter_area",      # diameter of sphere with same volume as region
+    "euler_number",                  # topology: objects + holes − tunnels (connectivity)
+    "extent",                        # volume / bounding-box volume (fill of the box)
+    "inertia_tensor_eigvals",        # eigenvalues of inertia tensor (3 values: shape/orientation)
     "intensity_mean",
     "intensity_min",
     "intensity_max",
