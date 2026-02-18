@@ -221,6 +221,7 @@ def segment_organoids_from_cp_labels(cytoplasm_labels):
 def remap_labels(nuclei_labels, cell_labels):
 
     # Label-to-label remapping: each nucleus inherits the cell label value it lies in
+    # Nuclei that cannnot be mapped to a cell become background (0)
     # Might cause some issues with multinucleated cells (will try to filter them out later)
 
     out = np.zeros_like(nuclei_labels)
