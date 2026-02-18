@@ -16,12 +16,18 @@ markers:
   - name: "Occludin_RFP"
     channel: 0
     location: "cell"
-  - name: "CellMask"
+  - name: "Claudin_FITC"
+    channel: 1
+    location: "cell"
+  - name: "CellMask_AF647"
     channel: 3
     location: "cell"
-  - name: "CellMask"
+  - name: "CellMask_AF647"
     channel: 3
-    location: "membrane"  
+    location: "membrane"
+  - name: "DAPI"
+    channel: 2
+    location: "nuclei"  
 
 # Output directories
 # Results will be saved to: results_folder / experiment_id / {well_id}_per_cell_results.csv
