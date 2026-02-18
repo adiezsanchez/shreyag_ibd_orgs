@@ -33,9 +33,10 @@ markers:
 # Results will be saved to: results_folder / experiment_id / {well_id}_per_cell_results.csv
 results_folder: "results_csv"
 
-# Cellpose label cache directory
-# Cached segmentations will be saved here to avoid recomputation
-cellpose_folder: "cellpose_labels"
+# Cellpose label cache directories (created under image directory if relative)
+# Two directories for cell (cytoplasm) and nuclei labels; same layout as BP notebook
+cellpose_cell_labels: "cellpose_cell_labels"
+cellpose_nuclei_labels: "cellpose_nuclei_labels"
 
 # Image downsampling factor
 # Use 2 or 4 for downsampling in XY (None for no downsampling)

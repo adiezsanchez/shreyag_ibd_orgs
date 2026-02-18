@@ -14,7 +14,8 @@ class AnalysisConfig:
     """Configuration data class for organoid analysis."""
     markers: List[Dict[str, Any]]
     results_folder: Path
-    cellpose_folder: Path
+    cellpose_cell_labels: Path
+    cellpose_nuclei_labels: Path
     slicing_factor_xy: Optional[int]
     cellpose_params: Dict[str, Any]
     directory_path: Optional[Path] = None
@@ -30,8 +31,8 @@ class AnalysisConfig:
             if not all(key in marker for key in ['name', 'channel', 'location']):
                 raise ValueError(f"Marker {marker} must have 'name', 'channel', and 'location' keys")
             
-            if marker['location'] not in ['cell', 'membrane']:
-                raise ValueError(f"Marker location must be 'cell' or 'membrane', got {marker['location']}")
+            if marker['location'] not in ['cell', 'membrane', 'nuclei']:
+                raise ValueError(f"Marker location must be 'cell', 'membrane', or 'nuclei', got {marker['location']}")
         
         if self.slicing_factor_xy is not None and self.slicing_factor_xy < 1:
             raise ValueError("slicing_factor_xy must be >= 1 or None")
@@ -66,10 +67,16 @@ class ConfigLoader:
         # Convert paths
         if 'results_folder' in config_dict:
             config_dict['results_folder'] = Path(config_dict['results_folder'])
-        if 'cellpose_folder' in config_dict:
-            config_dict['cellpose_folder'] = Path(config_dict['cellpose_folder'])
         if 'directory_path' in config_dict and config_dict['directory_path']:
             config_dict['directory_path'] = Path(config_dict['directory_path'])
+        
+        # Two Cellpose label directories (no subdirs)
+        if 'cellpose_cell_labels' in config_dict and 'cellpose_nuclei_labels' in config_dict:
+            config_dict['cellpose_cell_labels'] = Path(config_dict['cellpose_cell_labels'])
+            config_dict['cellpose_nuclei_labels'] = Path(config_dict['cellpose_nuclei_labels'])
+        else:
+            config_dict['cellpose_cell_labels'] = Path("cellpose_cell_labels")
+            config_dict['cellpose_nuclei_labels'] = Path("cellpose_nuclei_labels")
         
         config = AnalysisConfig(**config_dict)
         config.validate()
@@ -119,9 +126,16 @@ class ConfigLoader:
         )
         
         parser.add_argument(
-            '--cellpose-folder',
+            '--cellpose-cell-labels',
             type=str,
-            help='Folder for Cellpose label cache'
+            default=None,
+            help='Directory for Cellpose cell (cytoplasm) label cache (default: cellpose_cell_labels)'
+        )
+        parser.add_argument(
+            '--cellpose-nuclei-labels',
+            type=str,
+            default=None,
+            help='Directory for Cellpose nuclei label cache (default: cellpose_nuclei_labels)'
         )
         
         # Processing arguments
@@ -209,16 +223,18 @@ class ConfigLoader:
                 experiment_id = image_path_obj.parent.name
                 results_folder = Path("results") / experiment_id
             
-            if args.cellpose_folder:
-                cellpose_folder = Path(args.cellpose_folder)
-            else:
-                # Default: cellpose_labels in image directory
-                cellpose_folder = image_path_obj.parent / "cellpose_labels"
+            cellpose_cell_labels = Path(args.cellpose_cell_labels or "cellpose_cell_labels")
+            cellpose_nuclei_labels = Path(args.cellpose_nuclei_labels or "cellpose_nuclei_labels")
+            if not cellpose_cell_labels.is_absolute():
+                cellpose_cell_labels = image_path_obj.parent / cellpose_cell_labels
+            if not cellpose_nuclei_labels.is_absolute():
+                cellpose_nuclei_labels = image_path_obj.parent / cellpose_nuclei_labels
             
             config = AnalysisConfig(
                 markers=markers,
                 results_folder=results_folder,
-                cellpose_folder=cellpose_folder,
+                cellpose_cell_labels=cellpose_cell_labels,
+                cellpose_nuclei_labels=cellpose_nuclei_labels,
                 slicing_factor_xy=args.slicing_factor_xy,
                 cellpose_params={
                     'diameter': args.cellpose_diameter,
@@ -245,8 +261,12 @@ class ConfigLoader:
         if args.results_folder:
             config.results_folder = Path(args.results_folder)
         
-        if args.cellpose_folder:
-            config.cellpose_folder = Path(args.cellpose_folder)
+        if args.cellpose_cell_labels is not None:
+            p = Path(args.cellpose_cell_labels)
+            config.cellpose_cell_labels = p if p.is_absolute() else Path(args.image).parent / p
+        if args.cellpose_nuclei_labels is not None:
+            p = Path(args.cellpose_nuclei_labels)
+            config.cellpose_nuclei_labels = p if p.is_absolute() else Path(args.image).parent / p
         
         if args.slicing_factor_xy is not None:
             config.slicing_factor_xy = args.slicing_factor_xy

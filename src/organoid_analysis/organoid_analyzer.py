@@ -12,7 +12,8 @@ from .utils import (
     read_image,
     extract_scaling_metadata,
     segment_organoids_from_cp_labels,
-    extract_organoid_stats_and_merge
+    extract_organoid_stats_and_merge,
+    remap_labels,
 )
 from .config_loader import AnalysisConfig
 
@@ -39,123 +40,150 @@ class CellposeSegmenter:
         self.model = models.CellposeModel(gpu=use_gpu, model_type=model_type)
         logger.info(f"Loaded Cellpose model: {model_type}")
     
-    def load_or_segment(self, cellpose_prediction_path: Path, 
-                       cellpose_input: np.ndarray, 
-                       z_to_xy_ratio: float) -> np.ndarray:
-        """Load cached segmentation or run Cellpose."""
-        if cellpose_prediction_path.exists():
-            logger.info(f"Loading cached Cellpose prediction: {cellpose_prediction_path}")
-            return imread(cellpose_prediction_path)
-        
-        logger.info("Running Cellpose segmentation...")
+    def load_or_segment(
+        self,
+        segment_configs: list,
+        well_id: str,
+        position: int,
+        cellpose_input: np.ndarray,
+        z_to_xy_ratio: float,
+    ) -> dict:
+        """Load cached segmentations or run Cellpose for each (suffix, directory, channels).
+        segment_configs: list of (suffix, directory_path, channels) e.g. ("cell", path, [3,2]), ("nuclei", path, [2,0]).
+        Returns dict labels[suffix] e.g. labels["cell"], labels["nuclei"].
+        """
         params = self.config.cellpose_params
-        
-        cytoplasm_labels, _, _ = self.model.eval(
-            cellpose_input,
-            channels=[3, 2],  # Cellmask (ch3, index 2), nuclei (ch2, index 1)
-            diameter=params.get('diameter', 20),
-            do_3D=True,
-            anisotropy=z_to_xy_ratio,
-            normalize=True,
-            flow_threshold=params.get('flow_threshold', 0.4),
-            cellprob_threshold=params.get('cellprob_threshold', 0.0),
-            min_size=params.get('min_size', 15),
-        )
-        
-        # Save prediction
-        imwrite(cellpose_prediction_path, cytoplasm_labels)
-        logger.info(f"Saved Cellpose prediction: {cellpose_prediction_path}")
-        
-        return cytoplasm_labels
+        labels = {}
+        for suffix, directory, channels in segment_configs:
+            prediction_path = directory / f"{well_id}_{position}_{suffix}.tif"
+            if prediction_path.exists():
+                logger.info(f"Loading cached Cellpose prediction: {prediction_path}")
+                labels[suffix] = imread(prediction_path)
+            else:
+                logger.info(f"Running Cellpose segmentation for {suffix}...")
+                pred, _, _ = self.model.eval(
+                    cellpose_input,
+                    channels=channels,
+                    diameter=params.get("diameter", 20),
+                    do_3D=True,
+                    anisotropy=z_to_xy_ratio,
+                    normalize=True,
+                    flow_threshold=params.get("flow_threshold", 0.4),
+                    cellprob_threshold=params.get("cellprob_threshold", 0.0),
+                    min_size=params.get("min_size", 15),
+                )
+                imwrite(prediction_path, pred)
+                logger.info(f"Saved Cellpose prediction: {prediction_path}")
+                labels[suffix] = pred
+        return labels
+
+
+# Full 3D-compatible regionprops list (same as BP notebook)
+REGIONPROPS_PROPERTIES = [
+    "label",
+    "area",
+    "area_bbox",
+    "area_convex",
+    "area_filled",
+    "axis_major_length",
+    "axis_minor_length",
+    "equivalent_diameter_area",
+    "euler_number",
+    "extent",
+    "feret_diameter_max",
+    "solidity",
+    "inertia_tensor_eigvals",
+    "intensity_mean",
+    "intensity_min",
+    "intensity_max",
+    "intensity_std",
+]
 
 
 class MarkerAnalyzer:
     """Extracts marker statistics from segmented images."""
-    
+
     def __init__(self, config: AnalysisConfig):
         """Initialize marker analyzer."""
         self.config = config
-    
-    def analyze_markers(self, cytoplasm_labels: np.ndarray, 
-                       single_img: np.ndarray, 
-                       markers: list) -> pd.DataFrame:
-        """Extract statistics for all markers."""
+
+    def analyze_markers(
+        self,
+        cytoplasm_labels: np.ndarray,
+        nuclei_labels: np.ndarray,
+        single_img: np.ndarray,
+        markers: list,
+    ) -> pd.DataFrame:
+        """Extract statistics for all markers. nuclei_labels should be remapped to cytoplasm IDs."""
         props_list = []
         membrane_labels = None
-        
+        locations_seen = set()
+
         for marker in markers:
-            marker_name = marker['name']
-            ch_nr = marker['channel']
-            location = marker['location']
-            
+            marker_name = marker["name"]
+            ch_nr = marker["channel"]
+            location = marker["location"]
+
             logger.info(f"Analyzing channel: {marker_name} in {location}...")
-            
+
             if location == "cell":
-                props = regionprops_table(
-                    label_image=cytoplasm_labels,
-                    intensity_image=single_img[ch_nr],
-                    properties=[
-                        "label",
-                        "area",
-                        "intensity_mean",
-                        "intensity_min",
-                        "intensity_max",
-                        "intensity_std",
-                    ],
-                )
+                label_image = cytoplasm_labels
+            elif location == "nuclei":
+                label_image = nuclei_labels
             elif location == "membrane":
-                # Generate membrane labels if not already computed
                 if membrane_labels is None:
                     membrane_labels = cle.reduce_labels_to_label_edges(cytoplasm_labels)
                     membrane_labels = cle.pull(membrane_labels)
-                
-                props = regionprops_table(
-                    label_image=membrane_labels,
-                    intensity_image=single_img[ch_nr],
-                    properties=[
-                        "label",
-                        "area",
-                        "intensity_mean",
-                        "intensity_min",
-                        "intensity_max",
-                        "intensity_std",
-                    ],
-                )
+                label_image = membrane_labels
             else:
                 raise ValueError(f"Unknown location: {location}")
-            
-            # Convert to dataframe
+
+            props = regionprops_table(
+                label_image=label_image,
+                intensity_image=single_img[ch_nr],
+                properties=REGIONPROPS_PROPERTIES,
+            )
             props_df = pd.DataFrame(props)
-            
-            # Rename columns
+
+            # Rename columns (same as BP: label unchanged; area -> location_area; intensity_* -> prefix_suffix_int; else -> location_prop)
             prefix = f"{location}_{marker_name}"
-            rename_map = {
-                "area": f"{location}_area",
-                "intensity_mean": f"{prefix}_mean_int",
-                "intensity_min": f"{prefix}_min_int",
-                "intensity_max": f"{prefix}_max_int",
-                "intensity_std": f"{prefix}_std_int",
-            }
+            rename_map = {"label": "label"}
+            for prop in REGIONPROPS_PROPERTIES:
+                if prop == "label":
+                    continue
+                elif prop == "area":
+                    rename_map[prop] = f"{location}_area"
+                elif prop.startswith("intensity_"):
+                    suffix = prop.replace("intensity_", "")
+                    rename_map[prop] = f"{prefix}_{suffix}_int"
+                else:
+                    rename_map[prop] = f"{location}_{prop}"
             props_df.rename(columns=rename_map, inplace=True)
-            
-            # Calculate derived metrics
+
+            # Derived columns (use names from rename_map)
+            mean_col = rename_map["intensity_mean"]
+            max_col = rename_map["intensity_max"]
+            area_col = rename_map["area"]
             props_df[f"{prefix}_max_mean_ratio"] = (
-                props_df[f"{prefix}_max_int"] / props_df[f"{prefix}_mean_int"].replace(0, np.nan)
+                props_df[max_col] / props_df[mean_col].replace(0, np.nan)
             )
-            props_df[f"{prefix}_sum_int"] = (
-                props_df[f"{prefix}_mean_int"] * props_df[f"{location}_area"]
-            )
-            
+            props_df[f"{prefix}_sum_int"] = props_df[mean_col] * props_df[area_col]
+
+            if location in locations_seen:
+                cols_to_keep = ["label"] + [
+                    c for c in props_df.columns if c.startswith(prefix + "_")
+                ]
+                props_df = props_df[cols_to_keep]
+            else:
+                locations_seen.add(location)
+
             props_list.append(props_df)
-        
-        # Merge all marker dataframes
+
         if not props_list:
             raise ValueError("No markers to analyze")
-        
         props_df = props_list[0]
         for df in props_list[1:]:
             props_df = props_df.merge(df, on="label")
-        
         return props_df
 
 
@@ -234,42 +262,36 @@ class ImageProcessor:
         
         return df_well_id
     
-    def process_position(self, img: np.ndarray, filename: str, well_id: str, 
+    def process_position(self, img: np.ndarray, filename: str, well_id: str,
                         position: int, z_to_xy_ratio: float) -> pd.DataFrame:
         """Process a single position within an image."""
-        # Generate cellpose filename
-        cellpose_filename = f"{well_id}_{position}"
-        cellpose_prediction_path = self.config.cellpose_folder / f"{cellpose_filename}.tif"
-        
-        # Extract single position image
         single_img = img[position]
-        # Transpose to C, Z, Y, X format
-        single_img = single_img.transpose(1, 0, 2, 3)
-        
-        # Prepare cellpose input (channels 0, 2, 3: membrane, nuclei, cellmask)
-        cellpose_input = single_img[[0, 2, 3], :, :, :]
-        
-        # Load or run Cellpose segmentation
-        cytoplasm_labels = self.cellpose_segmenter.load_or_segment(
-            cellpose_prediction_path,
-            cellpose_input,
-            z_to_xy_ratio
+        single_img = single_img.transpose(1, 0, 2, 3)  # C, Z, Y, X
+        cellpose_input = single_img[[0, 2, 3], :, :, :]  # membrane, nuclei, cellmask
+
+        segment_configs = [
+            ("cell", self.config.cellpose_cell_labels, [3, 2]),
+            ("nuclei", self.config.cellpose_nuclei_labels, [2, 0]),
+        ]
+        labels = self.cellpose_segmenter.load_or_segment(
+            segment_configs, well_id, position, cellpose_input, z_to_xy_ratio
         )
-        
         del cellpose_input
-        
-        # Create descriptor dictionary
+
+        cytoplasm_labels = labels["cell"]
+        nuclei_labels = remap_labels(labels["nuclei"], cytoplasm_labels)
+
         descriptor_dict = {
             "filename": filename,
             "well_id": well_id,
             "multiposition_id": position,
         }
-        
-        # Analyze markers
+
         props_df = self.marker_analyzer.analyze_markers(
             cytoplasm_labels,
+            nuclei_labels,
             single_img,
-            self.config.markers
+            self.config.markers,
         )
         
         # Add descriptor columns
@@ -306,8 +328,7 @@ class OrganoidAnalyzer:
         """Create output directories if they don't exist."""
         folders_to_create = [
             self.config.results_folder,
-            # Don't create cellpose_folder here - it will be created in process_image()
-            # after we know the image path and can make it relative to the image directory
+            # Cellpose label dirs are created in process_image() after resolving relative to image path
         ]
         
         for folder in folders_to_create:
@@ -334,13 +355,17 @@ class OrganoidAnalyzer:
             os.makedirs(self.config.results_folder, exist_ok=True)
             logger.info(f"Results folder set to: {self.config.results_folder}")
         
-        # If cellpose_folder is relative and not absolute, make it relative to image directory
-        # This matches the original notebook behavior where cellpose_labels was in directory_path
-        if not self.config.cellpose_folder.is_absolute():
-            # Make it relative to image's parent directory (where images are stored)
-            self.config.cellpose_folder = image_path.parent / self.config.cellpose_folder
-            # Recreate directory with updated path
-            os.makedirs(self.config.cellpose_folder, exist_ok=True)
-        
+        # Resolve Cellpose label directories relative to image parent; create both (BP-identical)
+        if not self.config.cellpose_cell_labels.is_absolute():
+            self.config.cellpose_cell_labels = (
+                image_path.parent / self.config.cellpose_cell_labels
+            )
+        if not self.config.cellpose_nuclei_labels.is_absolute():
+            self.config.cellpose_nuclei_labels = (
+                image_path.parent / self.config.cellpose_nuclei_labels
+            )
+        os.makedirs(self.config.cellpose_cell_labels, exist_ok=True)
+        os.makedirs(self.config.cellpose_nuclei_labels, exist_ok=True)
+
         processor = ImageProcessor(self, image_path)
         return processor.process_all_positions()
