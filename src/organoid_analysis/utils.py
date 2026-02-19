@@ -314,32 +314,38 @@ def extract_organoid_stats_and_merge (mip_labels, organoid_labels, props_df):
 
     print(f"Cells mapped to no organoid: {n_orphans} - {perc_orphan}% of total cells ({total_cells})")
 
-    #Extract area information at an organoid level and merge with the existing props_df
+    # Extract area information at an organoid level and merge with the existing props_df
+    organoid_regionprops_properties = [
+        "label",                         # region identifier
+        "area",                          # number of pixels (region size in 2D)
+        "area_bbox",                     # area of axis-aligned bounding box (width × height)
+        "area_convex",                   # area of convex hull of the region
+        "area_filled",                   # area after filling holes
+        "axis_major_length",             # length of major axis from inertia tensor (elongation)
+        "axis_minor_length",             # length of minor axis (second principal axis in 2D)
+        "equivalent_diameter_area",      # diameter of circle with same area as region
+        "perimeter",                     # total boundary length (boundary complexity)
+        "eccentricity",                  # round (0) → elongated (1), from ellipse fit
+        "euler_number",                  # topology: #objects − #holes (connectivity in 2D)
+        "extent",                        # area / bounding-box area (how well the box is filled)
+        "feret_diameter_max",            # maximum Feret (caliper) diameter
+        "solidity",                      # area / convex-hull area (compact vs lobed)
+        "inertia_tensor_eigvals",        # eigenvalues of inertia tensor (2 values in 2D: shape/orientation)
+    ]
 
-    organoid_props = regionprops_table(label_image=organoid_labels,
-                                properties=[
-                                    "label",
-                                    "area",           # organoid size (2D MIP)
-                                    "perimeter",      # boundary complexity
-                                    "eccentricity",   # round (0) → elongated (1)
-                                    "solidity",       # filled vs lobed (area / convex area)
-                                    "extent",         # area / bounding box area
-                                ],
-                            )
-        
+    organoid_props = regionprops_table(
+        label_image=organoid_labels,
+        properties=organoid_regionprops_properties,
+    )
+
     # Convert to dataframe
     organoids_props_df = pd.DataFrame(organoid_props)
 
-    # Rename intensity_mean column to indicate the specific image
+    # Rename columns from actual DataFrame columns (covers array properties like inertia_tensor_eigvals-0, -1)
     prefix = "organoid"
-
     rename_map = {
-        "label": "organoid",
-        "area": f"{prefix}_area",
-        "perimeter": f"{prefix}_perimeter",
-        "eccentricity": f"{prefix}_eccentricity",
-        "solidity": f"{prefix}_solidity",
-        "extent": f"{prefix}_extent"
+        col: "organoid" if col == "label" else f"{prefix}_{col}"
+        for col in organoids_props_df.columns
     }
 
     organoids_props_df.rename(columns=rename_map, inplace=True)
