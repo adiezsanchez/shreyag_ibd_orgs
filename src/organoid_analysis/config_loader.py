@@ -21,7 +21,8 @@ class AnalysisConfig:
     directory_path: Optional[Path] = None
     check_gpu: bool = True
     enable_logger_setup: bool = False
-    
+    minimum_label_size: int = 250
+
     def validate(self):
         """Validate configuration parameters."""
         if not self.markers:
@@ -36,6 +37,9 @@ class AnalysisConfig:
         
         if self.slicing_factor_xy is not None and self.slicing_factor_xy < 1:
             raise ValueError("slicing_factor_xy must be >= 1 or None")
+
+        if self.minimum_label_size < 1:
+            raise ValueError("minimum_label_size must be >= 1")
 
 
 class ConfigLoader:
@@ -77,7 +81,10 @@ class ConfigLoader:
         else:
             config_dict['cellpose_cell_labels'] = Path("cellpose_cell_labels")
             config_dict['cellpose_nuclei_labels'] = Path("cellpose_nuclei_labels")
-        
+
+        if 'minimum_label_size' not in config_dict:
+            config_dict['minimum_label_size'] = 250
+
         config = AnalysisConfig(**config_dict)
         config.validate()
         return config
@@ -145,7 +152,14 @@ class ConfigLoader:
             default=None,
             help='Downsampling factor for XY (None for no downsampling)'
         )
-        
+
+        parser.add_argument(
+            '--minimum-label-size',
+            type=int,
+            default=None,
+            help='Minimum label size in voxels; smaller objects are removed (default: 250)'
+        )
+
         # Cellpose parameters
         parser.add_argument(
             '--cellpose-diameter',
@@ -245,6 +259,7 @@ class ConfigLoader:
                 },
                 check_gpu=not args.no_gpu_check,
                 enable_logger_setup=args.enable_logger_setup,
+                minimum_label_size=args.minimum_label_size if args.minimum_label_size is not None else 250,
             )
         
         # Override with CLI args if provided
@@ -270,7 +285,10 @@ class ConfigLoader:
         
         if args.slicing_factor_xy is not None:
             config.slicing_factor_xy = args.slicing_factor_xy
-        
+
+        if args.minimum_label_size is not None:
+            config.minimum_label_size = args.minimum_label_size
+
         config.validate()
         image_path = Path(args.image)
         return config, image_path

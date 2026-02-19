@@ -43,6 +43,10 @@ cellpose_nuclei_labels: "cellpose_nuclei_labels"
 # This reduces processing time but may affect accuracy
 slicing_factor_xy: null
 
+# Minimum label size (voxels); smaller objects are removed from cell/nuclei/membrane labels
+# Avoids wrong morphological feature extraction and ValueErrors (BP notebook default: 250)
+minimum_label_size: 250
+
 # Cellpose segmentation parameters
 cellpose_params:
   # Cell diameter in pixels (XY)

@@ -7,6 +7,8 @@ import numpy as np
 from cellpose import models, core, io
 import pyclesperanto_prototype as cle
 from skimage.measure import regionprops_table
+from skimage.morphology import remove_small_objects
+from skimage.segmentation import relabel_sequential
 from tifffile import imwrite, imread
 from .utils import (
     read_image,
@@ -83,12 +85,15 @@ REGIONPROPS_PROPERTIES = [
     "label",
     "area",                          # number of voxels (volume in voxel units)
     "area_bbox",                     # volume of axis-aligned bounding box
+    "area_convex",                   # volume of convex hull of the region
     "area_filled",                   # volume after filling holes
     "axis_major_length",             # length of major axis from inertia tensor (elongation)
     "axis_minor_length",             # length of minor axis (second principal axis in 3D)
     "equivalent_diameter_area",      # diameter of sphere with same volume as region
     "euler_number",                  # topology: objects + holes − tunnels (connectivity)
     "extent",                        # volume / bounding-box volume (fill of the box)
+    "feret_diameter_max",            # maximum Feret (caliper) diameter
+    "solidity",                      # volume / convex-hull volume (compact vs lobed)
     "inertia_tensor_eigvals",        # eigenvalues of inertia tensor (3 values: shape/orientation)
     "intensity_mean",
     "intensity_min",
@@ -131,6 +136,9 @@ class MarkerAnalyzer:
                 if membrane_labels is None:
                     membrane_labels = cle.reduce_labels_to_label_edges(cytoplasm_labels)
                     membrane_labels = cle.pull(membrane_labels)
+                    membrane_labels = remove_small_objects(
+                        membrane_labels, min_size=self.config.minimum_label_size
+                    )
                 label_image = membrane_labels
             else:
                 raise ValueError(f"Unknown location: {location}")
@@ -155,6 +163,10 @@ class MarkerAnalyzer:
                     rename_map[prop] = f"{prefix}_{suffix}_int"
                 else:
                     rename_map[prop] = f"{location}_{prop}"
+            # Array properties (e.g. inertia_tensor_eigvals-0, -1, -2) get location prefix
+            for col in props_df.columns:
+                if col not in rename_map:
+                    rename_map[col] = f"{location}_{col}"
             props_df.rename(columns=rename_map, inplace=True)
 
             # Derived columns (use names from rename_map)
@@ -275,8 +287,13 @@ class ImageProcessor:
         )
         del cellpose_input
 
+        min_size = self.config.minimum_label_size
         cytoplasm_labels = labels["cell"]
-        nuclei_labels = remap_labels(labels["nuclei"], cytoplasm_labels)
+        cytoplasm_labels = remove_small_objects(cytoplasm_labels, min_size=min_size)
+        cytoplasm_labels = relabel_sequential(cytoplasm_labels)[0]
+        nuclei_labels = labels["nuclei"]
+        nuclei_labels = remove_small_objects(nuclei_labels, min_size=min_size)
+        nuclei_labels = remap_labels(nuclei_labels, cytoplasm_labels)
 
         descriptor_dict = {
             "filename": filename,
