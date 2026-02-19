@@ -229,7 +229,7 @@ def remap_labels(nuclei_labels, cell_labels):
     for nid in np.unique(nuclei_labels):
         if nid == 0:
             continue
-        
+
         mask = nuclei_labels == nid
         cell_vals = cell_labels[mask]
         cell_vals = cell_vals[cell_vals != 0]  # ignore background
@@ -308,8 +308,8 @@ def extract_organoid_stats_and_merge (mip_labels, organoid_labels, props_df):
         .sum()
     )
 
-    #Calculate percentage of orphan cells to total cells
-    total_cells = props_df["label"].max()
+    #Calculate percentage of orphan cells to total cells (use row count to reflect true cells after filtering)
+    total_cells = len(props_df)
     perc_orphan = round(((n_orphans / total_cells) * 100), 2)
 
     print(f"Cells mapped to no organoid: {n_orphans} - {perc_orphan}% of total cells ({total_cells})")
