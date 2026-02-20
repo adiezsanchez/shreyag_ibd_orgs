@@ -18,7 +18,7 @@ git clone https://github.com/adiezsanchez/shreyag_ibd_orgs.git && cd shreya_ibd_
 
 This will clone the repo, install the virtual environment via pixi and launch a Jupyter instance to interact with the Jupyter Notebooks inside ./notebooks.
 
-### Single image
+### Process a single image
 
 ```bash
 pixi run python main.py --image "/path/to/image.nd2" --config config.yaml
@@ -31,32 +31,18 @@ pixi shell
 python main.py --image "/path/to/image.nd2" --config config.yaml
 ```
 
-### #TODO: Whole folder (all `.nd2` in a directory)
+### Process folder containing images (all `.nd2` in a directory)
 
 Use pixi tasks so the environment is used automatically.
-
-**Windows (PowerShell):**
-
-```powershell
-pixi run run_folder_powershell "C:\path\to\image\folder"
-pixi run run_folder_powershell "C:\path\to\image\folder" other_config.yaml
-```
-
-**Linux / macOS / Git Bash / WSL (Bash):**
-
-```bash
-pixi run run_folder_bash /path/to/image/folder
-pixi run run_folder_bash /path/to/image/folder other_config.yaml
-```
 
 **Cross-platform (pixi picks the script by OS):**
 
 ```bash
-pixi run run_folder /path/to/image/folder
-pixi run run_folder /path/to/image/folder other_config.yaml
+pixi run run_folder "/path/to/image/folder"
+pixi run run_folder "/path/to/image/folder" other_config.yaml
 ```
 
-Arguments: first = image folder path (required), second = config file (optional, default `config.yaml`).
+Arguments: first = image folder path (required, remember quotation marks " " ), second = config file (optional, default `config.yaml`).
 
 ---
 

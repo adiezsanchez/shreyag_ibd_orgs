@@ -23,6 +23,10 @@ fix_opencl_hpc = "scripts/fix_opencl_hpc.sh"
 [tasks.lab]
 cmd = "jupyter lab"
 
+[tasks.run_folder]
+args = ["folder", { arg = "config", default = "config.yaml" }]
+cmd = "python scripts/run_folder.py \"{{ folder }}\" \"{{ config }}\""
+
 # -------------------------
 # Conda-forge dependencies
 # -------------------------
