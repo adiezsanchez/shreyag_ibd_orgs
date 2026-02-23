@@ -54,4 +54,12 @@ def plot_plate_view(df, column_name, title, label, save_dir, fmt=3, display=True
 
     print(f"Saved plate view to {save_path}")
 
+def get_1st_99th_percentile(series):
+    """
+    Returns the 1st and 99th percentile values of a pandas Series as a tuple (min, max).
+    """
+    p1 = series.quantile(0.01)
+    p99 = series.quantile(0.99)
+    return (p1, p99)
+
 
