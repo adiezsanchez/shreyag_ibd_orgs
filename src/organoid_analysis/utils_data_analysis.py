@@ -62,4 +62,36 @@ def get_1st_99th_percentile(series):
     p99 = series.quantile(0.99)
     return (p1, p99)
 
+def merge_csv_files(results_directory, df_conditions):
+
+    # Get all csv files
+    csv_files = sorted(results_directory.glob("*.csv"))
+
+    if not csv_files:
+        raise ValueError("No CSV files found in folder")
+
+    df = pd.concat(
+        [pd.read_csv(f) for f in csv_files],
+        ignore_index=True
+    )
+
+    df_merged = df.merge(
+        df_conditions,
+        left_on="well_id",
+        right_on="well_id",
+        how="left"
+    )
+
+    # Sanity check: Wells in df without condition info
+    missing = df_merged["condition"].isna().sum()
+    print(f"Rows without condition: {missing}")
+
+    # Sanity check: unique wells before/after
+    print(f'Unique wells before: {df["well_id"].nunique()}', f'Unique wells after: {df_merged["well_id"].nunique()}')
+
+    # Print the feature names
+    print(df.columns)
+
+    return df_merged
+
 
