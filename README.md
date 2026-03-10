@@ -1,6 +1,6 @@
 # shreyag_ibd_orgs
 
-Analysis of colon organoids in 2D and 3D: Cellpose-based segmentation, organoid detection, and per-cell/per-organoid measurements from Nikon ND2 and Zeiss CZI images. Inputs (markers, channels, compartments) are set in `config.yaml` or via CLI.
+Analysis of colon organoids in 3D: Cellpose-based segmentation, organoid detection, and per-cell/per-organoid measurements from Nikon .nd2 images. Inputs (markers, channels, compartments) are set in `config.yaml` or via CLI.
 
 **Requirements:** [pixi](https://pixi.sh/), Git and a CUDA-capable GPU (for Cellpose and OpenCL).
 
