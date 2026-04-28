@@ -1,0 +1,81 @@
+# Example configuration file for organoid analysis pipeline
+# This file can be used with --config flag, or parameters can be overridden via command-line
+
+# Markers to analyze
+# Each marker is a dictionary with:
+#   - name: Marker name (for output column naming)
+#   - channel: Channel index (0-indexed) in the image
+#   - location: Either "cell" or "membrane" - where to measure the marker
+markers:
+  - name: "Occludin_RFP"
+    channel: 0
+    location: "membrane"
+  - name: "E-Cadherin_FITC"
+    channel: 1
+    location: "membrane"
+  - name: "Occludin_RFP"
+    channel: 0
+    location: "cell"
+  - name: "E-Cadherin_FITC"
+    channel: 1
+    location: "cell"
+  - name: "CellMask_AF647"
+    channel: 3
+    location: "cell"
+  - name: "CellMask_AF647"
+    channel: 3
+    location: "membrane"
+  - name: "Claudin-1_AF750"
+    channel: 4
+    location: "cell"
+  - name: "Claudin-1_AF750"
+    channel: 4
+    location: "membrane"
+  - name: "DAPI"
+    channel: 2
+    location: "nuclei"  
+
+# Output directories
+# Results will be saved to: results_folder / experiment_id / {well_id}_per_cell_results.csv
+results_folder: "results_csv"
+
+# Cellpose label cache directories (created under image directory if relative)
+# Two directories for cell (cytoplasm) and nuclei labels; same layout as BP notebook
+cellpose_cell_labels: "cellpose_cell_labels"
+cellpose_nuclei_labels: "cellpose_nuclei_labels"
+
+# Image downsampling factor
+# Use 2 or 4 for downsampling in XY (None for no downsampling)
+# This reduces processing time but may affect accuracy
+slicing_factor_xy: null
+
+# Minimum label size (voxels); smaller objects are removed from cell/nuclei/membrane labels
+# Avoids wrong morphological feature extraction and ValueErrors (BP notebook default: 250)
+minimum_label_size: 250
+
+# Cellpose segmentation parameters
+cellpose_params:
+  # Cell diameter in pixels (XY)
+  diameter: 20
+  
+  # Flow threshold (lower = more cells detected)
+  flow_threshold: 0.4
+  
+  # Cell probability threshold (lower = more cells detected)
+  cellprob_threshold: 0.0
+  
+  # Minimum cell size in pixels
+  min_size: 15
+  
+  # Cellpose model type (e.g., "cyto3", "cyto2", "nuclei")
+  model_type: "cyto3"
+
+# GPU and logging options
+# Set to false to skip GPU availability check (useful for HPC environments)
+check_gpu: true
+
+# Enable Cellpose logger setup (produces verbose output)
+enable_logger_setup: false
+
+# Optional: Input directory path (not needed if using --image argument)
+# directory_path: null
