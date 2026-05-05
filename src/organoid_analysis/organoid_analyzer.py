@@ -201,15 +201,15 @@ class OrganoidSegmenter:
     
     @staticmethod
     def segment_organoids(cytoplasm_labels: np.ndarray):
-        """Extract organoid outlines from cytoplasm labels."""
+        """Extract 3D organoid label volume from cytoplasm labels (same Z,Y,X as input)."""
         return segment_organoids_from_cp_labels(cytoplasm_labels)
     
     @staticmethod
-    def merge_stats(mip_labels: np.ndarray, 
+    def merge_stats(nuclei_labels: np.ndarray, 
                    organoid_labels: np.ndarray, 
                    props_df: pd.DataFrame) -> pd.DataFrame:
-        """Merge cell and organoid statistics."""
-        return extract_organoid_stats_and_merge(mip_labels, organoid_labels, props_df)
+        """Merge cell and organoid statistics (cell IDs from remapped nuclei labels)."""
+        return extract_organoid_stats_and_merge(nuclei_labels, organoid_labels, props_df)
 
 
 class ImageProcessor:
@@ -315,10 +315,10 @@ class ImageProcessor:
             insertion_position += 1
         
         # Segment organoids
-        mip_labels, organoid_labels = self.organoid_segmenter.segment_organoids(cytoplasm_labels)
+        organoid_labels = self.organoid_segmenter.segment_organoids(cytoplasm_labels)
         
         # Merge organoid stats
-        final_df = self.organoid_segmenter.merge_stats(mip_labels, organoid_labels, props_df)
+        final_df = self.organoid_segmenter.merge_stats(nuclei_labels, organoid_labels, props_df)
         
         return final_df
 
