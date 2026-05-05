@@ -119,7 +119,10 @@ def segment_organoids_from_cp_labels(cytoplasm_labels):
     # Relabel starting from 1
     organoid_labels = relabel_sequential(org_labels)[0]
 
-    return mip_labels, organoid_labels
+    # Make organoid labels 3D (extend across z-axis)
+    organoid_labels = np.broadcast_to(organoid_labels, cytoplasm_labels.shape)
+
+    return organoid_labels
 
 def remap_labels(nuclei_labels, cell_labels):
 
@@ -164,12 +167,12 @@ def map_small_to_big(labels_small, labels_big):
 
     return mapping
 
-def extract_organoid_stats_and_merge (mip_labels, organoid_labels, props_df):
+def extract_organoid_stats_and_merge (nuclei_labels, organoid_labels, props_df):
 
     """Map each cell label to its corresponding organoid, extract simple organoid features and merge with per cell stats"""
 
-    # Map each cell label to each corresponding organoid
-    mapping = map_small_to_big(mip_labels, organoid_labels)
+    # Map each cell label to each corresponding organoid (mapping in 3D space)
+    mapping = map_small_to_big(nuclei_labels, organoid_labels)
 
     # Invert mapping to map to props_df
     small_to_big = {}
@@ -196,21 +199,6 @@ def extract_organoid_stats_and_merge (mip_labels, organoid_labels, props_df):
     # Cells with no organoid
     n_orphans = (props_df["organoid"] == 0).sum()
 
-    # Cells mapped to non-existing organoids
-    bad = ~props_df["organoid"].isin(np.unique(organoid_labels))
-    if bad.any():
-        bad_rows = props_df.loc[bad]
-        print("Cells mapped to non-existing organoids: Double check logic")
-
-    # Cells assigned to multiple organoids
-    n_multi_parent = (
-        props_df
-        .groupby("label")["organoid"]
-        .nunique()
-        .gt(1)
-        .sum()
-    )
-
     #Calculate percentage of orphan cells to total cells (use row count to reflect true cells after filtering)
     total_cells = len(props_df)
     perc_orphan = round(((n_orphans / total_cells) * 100), 2)
@@ -236,8 +224,10 @@ def extract_organoid_stats_and_merge (mip_labels, organoid_labels, props_df):
         "inertia_tensor_eigvals",        # eigenvalues of inertia tensor (2 values in 2D: shape/orientation)
     ]
 
+    # Extract organoid features (flattened 2D labels)
+    organoid_2d_labels = np.max(organoid_labels, axis=0)
     organoid_props = regionprops_table(
-        label_image=organoid_labels,
+        label_image=organoid_2d_labels,
         properties=organoid_regionprops_properties,
     )
 
