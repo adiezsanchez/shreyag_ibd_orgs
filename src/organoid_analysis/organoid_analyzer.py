@@ -226,19 +226,17 @@ class ImageProcessor:
     
     def process_all_positions(self) -> pd.DataFrame:
         """Process all positions in the image file."""
-        # Read image
-        img, filename = read_image(str(self.image_path), self.config.slicing_factor_xy)
-        
-        # Extract well_id from filename
-        well_id = filename.split("_")[0]
-        
         # Check if results already exist
+        well_id = self.image_path.stem.split("_")[0]
         csv_name = f"{well_id}_per_cell_results.csv"
         csv_path = self.config.results_folder / csv_name
         
         if csv_path.is_file():
             logger.info(f"Skipping {well_id} well analysis: Results already found at: {csv_path}")
             return None
+
+        # Read image
+        img, filename = read_image(str(self.image_path), self.config.slicing_factor_xy)
         
         # Extract scaling metadata
         pixel_size_x, pixel_size_y, voxel_size_z = extract_scaling_metadata(self.image_path)

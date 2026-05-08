@@ -8,7 +8,7 @@ __pycache__
 # Data folders
 raw_data
 results
-results_cursor
+results_csv
 .vscode
 
 #Slurm output files
